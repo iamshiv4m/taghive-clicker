@@ -168,7 +168,7 @@
   "build": {
     "productName": "ElectronReact",
     "appId": "org.erb.ElectronReact",
-    "asar": false,
+    "asar": true,
     "asarUnpack": "**\\*.{node,dll}",
     "files": [
       "dist",
@@ -221,8 +221,11 @@
     },
     "extraResources": [
       {
-        "from": "node_modules/@serialport",
-        "to": "node_modules/@serialport"
+        "from": "node_modules/@serialport/bindings-cpp",
+        "to": "../",
+        "filter": [
+          "**/*.node"
+        ]
       },
       "./assets/**",
       "./eng.traineddata"
