@@ -14,6 +14,7 @@ import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
+import init, { portList } from '../SDK/init';
 
 class AppUpdater {
   constructor() {
@@ -83,6 +84,15 @@ const createWindow = async () => {
 
   mainWindow.loadURL(resolveHtmlPath('index.html'));
 
+  /* for clicker SDK */
+  ipcMain.handle('check-ports-and-listen', async () => {
+    console.log("Handler 'check-ports-and-listen' invoked");
+    const ports = await portList();
+    console.log('ports: ', ports);
+    mainWindow?.webContents.send('final-port-list', ports);
+    return ports;
+  });
+
   mainWindow.on('ready-to-show', () => {
     if (!mainWindow) {
       throw new Error('"mainWindow" is not defined');
@@ -135,3 +145,5 @@ app
     });
   })
   .catch(console.log);
+
+init();
