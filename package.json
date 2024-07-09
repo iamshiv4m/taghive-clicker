@@ -88,6 +88,7 @@
     }
   },
   "dependencies": {
+    "cli-truncate": "^4.0.0",
     "electron-debug": "^3.2.0",
     "electron-log": "^4.4.8",
     "electron-updater": "^6.1.4",
@@ -168,7 +169,7 @@
   "build": {
     "productName": "ElectronReact",
     "appId": "org.erb.ElectronReact",
-    "asar": true,
+    "asar": false,
     "asarUnpack": "**\\*.{node,dll}",
     "files": [
       "dist",
@@ -222,7 +223,7 @@
     "extraResources": [
       {
         "from": "node_modules/@serialport/bindings-cpp",
-        "to": "../",
+        "to": "./app/dist",
         "filter": [
           "**/*.node"
         ]
