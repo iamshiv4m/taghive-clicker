@@ -178,6 +178,13 @@
     ],
     "afterSign": ".erb/scripts/notarize.js",
     "mac": {
+      "extraResources":{
+        "from": "node_modules/@serialport/bindings-cpp",
+        "to": "./app/dist",
+        "filter": [
+          "**/*.node"
+        ]
+      },
       "target": {
         "target": "default",
         "arch": [
@@ -205,6 +212,15 @@
       ]
     },
     "win": {
+      "extraResources": [
+        {
+          "from": "node_modules/@serialport/bindings-cpp",
+          "to": "../",
+          "filter": [
+            "**/*.node"
+          ]
+        }
+      ],
       "target": [
         "nsis"
       ]
@@ -221,13 +237,6 @@
       "output": "release/build"
     },
     "extraResources": [
-      {
-        "from": "node_modules/@serialport/bindings-cpp",
-        "to": "./app/dist",
-        "filter": [
-          "**/*.node"
-        ]
-      },
       "./assets/**",
       "./eng.traineddata"
     ],
