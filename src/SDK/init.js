@@ -11,6 +11,7 @@ let MAX_BUFFER = 134217728; // Setting the maximum buffer size for child process
 
 // Initializing a dongle
 function init(execName, callback) {
+  console.log('hello iniht');
   app.on('ready', async () => {
     // Event listener for when the Electron app is ready
     const gotTheLock = app.requestSingleInstanceLock(); // Checking if the app has acquired the single instance lock
@@ -62,17 +63,17 @@ async function portList() {
 
 function setupSerialPort() {
   ipcMain.on('serialport', (event, data) => {
-    // Event listener for serial port communication
-    var classKeySerialPort;
+    let classKeySerialPort;
+
     switch (data.type) {
       case 'open':
         portList().then((ports) => {
-          // Getting the list of available serial ports
-          for (var port of ports) {
-            if (port.vendorId === undefined) {
-              continue;
-            }
-            console.log('port vendorId: ' + port.vendorId); // Logging the vendor ID of the serial port
+          for (const port of ports) {
+            if (!port.vendorId) continue; // Skip ports without a vendor ID
+
+            console.log('port vendorId: ' + port.vendorId); // Log the vendor ID of the serial port
+
+            // Check if the device matches the expected vendor and product IDs
             if (
               port.vendorId === '1915' &&
               (port.productId === '521a' ||
@@ -80,7 +81,8 @@ function setupSerialPort() {
                 port.productId === 'c00a' ||
                 port.productId === 'C00A')
             ) {
-              console.log('path', port.path); // Logging the path of the serial port
+              console.log('path', port.path); // Log the path of the serial port
+
               classKeySerialPort = new SerialPort(
                 {
                   path: port.path,
@@ -89,60 +91,86 @@ function setupSerialPort() {
                   parity: 'none',
                 },
                 false,
-              ); // Creating a new instance of the SerialPort class
+              ); // Create a new SerialPort instance
+
+              // Function to handle reconnection attempts
+              const reconnect = () => {
+                console.log('Attempting to reconnect...');
+                setTimeout(() => {
+                  classKeySerialPort.open((err) => {
+                    if (err) {
+                      console.log('Reconnection failed, retrying...');
+                      reconnect(); // Retry on failure
+                    } else {
+                      console.log('Reconnected successfully!');
+                      event.sender.send('serialport', { type: 'reconnected' }); // Notify the renderer of successful reconnection
+                    }
+                  });
+                }, 5000); // Reconnection delay
+              };
+
+              // Event listeners for the serial port
               classKeySerialPort
                 .on('open', () => {
-                  event.sender.send('serialport', { type: 'opened' }); // Sending an event to the renderer process when the serial port is opened
+                  console.log('Serial port opened');
+                  event.sender.send('serialport', { type: 'opened' }); // Notify the renderer when the port is opened
                 })
                 .on('close', () => {
-                  console.log('close'); // Logging when the serial port is closed
-                  event.sender.send('serialport', { type: 'closed' }); // Sending an event to the renderer process when the serial port is closed
+                  console.log('Serial port closed');
+                  event.sender.send('serialport', { type: 'closed' }); // Notify the renderer when the port is closed
+                  reconnect(); // Attempt to reconnect
                 })
                 .on('error', (error) => {
-                  console.log('error'); // Logging any errors that occur during serial port communication
-                  console.error(error);
+                  console.log('Serial port error:', error.message); // Log the error message
                   event.sender.send('serialport', {
                     type: 'error',
                     payload: { message: error.message },
-                  }); // Sending an event to the renderer process with the error message
+                  }); // Notify the renderer of the error
+                  reconnect(); // Attempt to reconnect
                 })
                 .on('data', (data) => {
-                  console.log('data received'); // Logging when data is received from the serial port
-                  console.log(data); // Logging the received data
-                  console.log('data received finished');
+                  console.log('Data received'); // Log data received
+                  console.log(data); // Log the actual data
                   event.sender.send('serialport', {
                     type: 'data',
                     payload: data,
-                  }); // Sending an event to the renderer process with the received data
+                  }); // Notify the renderer of the data
                 });
-              return;
+
+              return; // Exit the loop when the correct device is found
             }
           }
-          console.log('device not found'); // Logging when the specified device is not found
+
+          // If the correct device is not found, send an error to the renderer
+          console.log('Device not found');
           event.sender.send('serialport', {
             type: 'error',
-            payload: { message: 'device not found' },
-          }); // Sending an event to the renderer process with the error message
-          //}
+            payload: {
+              message: 'Device not found. Please connect the USB device.',
+            },
+          });
         });
         break;
+
       case 'close':
         if (classKeySerialPort && classKeySerialPort.isOpen) {
-          classKeySerialPort.close(); // Closing the serial port if it is open
+          classKeySerialPort.close(); // Close the port if it is open
         }
         break;
+
       case 'write':
         if (classKeySerialPort && classKeySerialPort.isOpen) {
-          var writeBuffer = Buffer.from(data.payload); // Converting the payload data to a buffer
-          classKeySerialPort.write(writeBuffer, function (err, result) {
-            // Writing the buffer to the serial port
+          const writeBuffer = Buffer.from(data.payload); // Convert payload to buffer
+          classKeySerialPort.write(writeBuffer, (err, result) => {
             if (err) {
-              console.log('Error while sending message : ' + err); // Logging any errors that occur while sending the message
+              console.log('Error while sending message: ' + err); // Log error
+              event.sender.send('serialport', {
+                type: 'error',
+                payload: { message: 'Failed to send data to the USB device.' },
+              }); // Notify the renderer of the error
             }
             if (result) {
-              console.log(
-                'Response received after sending message : ' + result,
-              ); // Logging the response received after sending the message
+              console.log('Response received after sending message: ' + result); // Log response
             }
           });
         }
