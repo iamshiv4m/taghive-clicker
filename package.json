@@ -168,7 +168,7 @@
     "webpack-merge": "^5.9.0"
   },
   "build": {
-    "productName": "ElectronReact",
+    "productName": "clicker-sdk",
     "appId": "org.erb.ElectronReact",
     "asar": false,
     "asarUnpack": "**\\*.{node,dll}",
